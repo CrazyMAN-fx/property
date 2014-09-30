@@ -3,7 +3,7 @@ package assets.enums;
 import play.i18n.Messages;
 
 /**
- * Created by PENTAGON on 29.07.14.
+ * Created by PENTAGON on 29.07.14. 123
  */
 public enum ActionType {
     SELL("SELL"),
