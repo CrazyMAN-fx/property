@@ -3,12 +3,11 @@ package assets.enums;
 import play.i18n.Messages;
 
 /**
- * Created by PENTAGON on 29.07.14. 123
+ * Created by PENTAGON on 29.07.14.
  */
 public enum ActionType {
     SELL("SELL"),
-    RENT("RENT"),
-    DDD("DDD");
+    RENT("RENT");
 
 
     private String value;
