@@ -7,7 +7,8 @@ import play.i18n.Messages;
  */
 public enum ActionType {
     SELL("SELL"),
-    RENT("RENT");
+    RENT("RENT"),
+    DDD("DDD");
 
 
     private String value;
