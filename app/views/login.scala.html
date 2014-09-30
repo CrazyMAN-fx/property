@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Вход</title>
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-theme.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-glyphicons.css">
+    <link rel="stylesheet" href="/assets/stylesheets/normalize.css">
+    <script src="/assets/javascripts/jquery-2.1.1.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/bootstrap.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/placeholders.jquery.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/validation.support.js" type="text/javascript"></script>
+    <style>
+        .centered {
+        float: none;
+        margin-left: auto;
+        margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="centered" style="max-width: 320px;">
+            <div class="row">
+                <h1 class="text-center">
+                    Вход
+                </h1>
+            </div>
+
+            <div class="row bg-danger hidden" id="errorBlock">
+                <h4 class="text-center">
+                    Неправильная пара </br>
+                    электронная почта / пароль
+                </h4>
+            </div>
+
+            <form id="loginForm" role="form" method="post" action="/login" class="row well">
+                <div class="form-group" id="emailGroup">
+                    <input type="text" name="email" class="form-control" placeholder="Электронная почта">
+                    <span class="help-block hidden" errorCode="e1">Укажите электронную почту</span>
+                    <span class="help-block hidden" errorCode="e2">Некорректный адрес электронной почты</span>
+                </div>
+                <div class="form-group" id="passwordGroup">
+                    <input type="password" name="password" class="form-control" placeholder="Пароль">
+                    <span class="help-block hidden" errorCode="e1">Пароль должен содержать не менее 5 символов</span>
+                </div>
+                <div class="form-group row">
+                    <div class="checkbox col-lg-6">
+                        <label>
+                            <input type="checkbox" name="tempLogin">Чужой компьютер
+                        </label>
+                    </div>
+                    <div class="col-lg-6">
+                        <a>Забыли пароль?</a>
+                    </div>
+                </div>
+                <div class="form-group text-center">
+                    <button type="submit" class="btn btn-success">Войти</button>
+                </div>
+            </form>
+
+            <div class="row text-center">
+                Нет учётной записи? <a href="/registration">Регистрация</a>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+        var validate=function(){
+            var loginForm = $('#loginForm');
+            clearErrors(loginForm);
+            var isValid=true;
+            isValid = validateEmail(loginForm.find('#emailGroup')) && isValid;
+            isValid = validatePassword(loginForm.find('#passwordGroup')) && isValid;
+            return isValid;
+        };
+
+        $('#loginForm').on('submit', function(e) {
+            e.preventDefault();
+            if (validate()){
+                $.post($(this).attr('action'), $(this).serialize(),function(data) {
+                    clearErrors($('#loginForm'));
+                    $.each(data, function(key, element) {
+                        var loginForm = $('#loginForm');
+                        if (element!==null){
+                            setError(loginForm.find('#'+key+'Group'),element);
+                        };
+                    });
+                    if (!data.loginStatus){
+                        $('#errorBlock').removeClass('hidden');
+                    } else {
+                        window.location.href='/';
+                    }
+                }, "json");
+            };
+        });
+</script>
+</body>
+</html>

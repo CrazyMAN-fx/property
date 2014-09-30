@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        .navbar-brand {
+            float: left;
+            padding: 0px 15px 0px 15px;
+            font-size: 18px;
+            line-height: 20px;
+            height: 50px;
+            width: 160px;
+        }
+
+        .modal-dialog{
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-default" role="navigation">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#site-header">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <img class="navbar-brand" src="/assets/images/logo/rsz_1mesa-real-estate-logo.jpg"
+                 onclick="window.location.href='/';" style="width: 120px;"/>
+        </div>
+
+        <div class="navbar-collapse collapse" id="site-header" style="height: 1px;">
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a>
+                        <span class="glyphicon glyphicon-earphone"></span>
+                        Обратная связь
+                    </a>
+                </li>
+                <li>
+                    <a>
+                        <span class="glyphicon glyphicon-info-sign"></span>
+                        Помощь
+                    </a>
+                </li>
+                <li>
+                    <a href="/favourite">
+                        <span class="glyphicon glyphicon-star"></span>
+                        Избранное
+                    </a>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                        <span class="glyphicon glyphicon-user"></span>
+                        Личный кабинет
+                        <span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li class="forNotLogin" data-toggle="modal" data-target="#loginDialog"><a>Войти</a></li>
+                        <li class="forNotLogin"><a href="/registration">Зарегистрироваться</a></li>
+                        <li class="forLogin"><a onclick="myAdClick();">Мои объявления</a></li>
+                        <!--<li class="forLogin"><a onclick="mySearchClick();">Мой поиск</a></li>-->
+                        <li class="forLogin"><a onclick="purseClick();">Кошелёк</a></li>
+                        <li class="forLogin"><a onclick="settingsClick();">Настройки</a></li>
+                        <li class="forLogin"><a onclick="logout();">Выйти</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <button type="button" class="btn navbar-btn btn-primary"
+                            onclick="if (userAuthStatus) window.open('/new_property'); else window.open('/registration/quick')">
+                        Подать объявление
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="modal fade" id="loginDialog" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"
+     data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                        class="sr-only">Close</span></button>
+                <h3 class="modal-title text-center" id="myModalLabel">Вход</h3>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <div class="row bg-danger hidden" id="errorBlock">
+                        <h4 class="text-center">
+                            Неправильная пара </br>
+                            электронная почта / пароль
+                        </h4>
+                    </div>
+
+                    <form id="loginForm" role="form" method="post" action="/login" class="row well">
+                        <div class="form-group" id="emailGroup">
+                            <input type="text" name="email" class="form-control" placeholder="Электронная почта">
+                            <span class="help-block hidden" errorCode="e1">Укажите электронную почту</span>
+                                <span class="help-block hidden"
+                                      errorCode="e2">Некорректный адрес электронной почты</span>
+                        </div>
+                        <div class="form-group" id="passwordGroup">
+                            <input type="password" name="password" class="form-control" placeholder="Пароль">
+                            <span class="help-block hidden"
+                                  errorCode="e1">Пароль должен содержать не менее 5 символов</span>
+                        </div>
+                        <div class="form-group row">
+                            <div class="checkbox col-lg-6" style="margin-top:0px;">
+                                <label>
+                                    <input type="checkbox" name="tempLogin">Чужой компьютер
+                                </label>
+                            </div>
+                            <div class="col-lg-6">
+                                <a>Забыли пароль?</a>
+                            </div>
+                        </div>
+                        <div class="row text-center">
+                            <button type="submit" class="btn btn-success">Войти</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+                        </div>
+                    </form>
+
+                    <div class="row text-center">
+                        Нет учётной записи? <a href="/registration">Регистрация</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+        var userAuthStatus=false;
+        var closeHeaderMenu=function(){
+            var toggle = $('button[data-target=#site-header]');
+            if (toggle.is(':visible')){
+                toggle.click();
+            }
+        };
+
+        var myAdClick=function(){
+            closeHeaderMenu();
+            window.location.href='/office?tab=myAdv';
+        };
+
+        var mySearchClick=function(){
+            closeHeaderMenu();
+            window.location.href='/office?tab=mySearch';
+        };
+
+        var purseClick=function(){
+            closeHeaderMenu();
+            window.location.href='/office?tab=purse';
+        };
+        var settingsClick=function(){
+            closeHeaderMenu();
+            window.location.href='/office?tab=settings';
+        };
+
+        var applyLoginStatus = function (isLogin){
+            userAuthStatus=isLogin;
+            if(isLogin){
+                $('.forNotLogin').addClass('hidden');
+                $('.forLogin').removeClass('hidden');
+            } else {
+                $('.forLogin').addClass('hidden');
+                $('.forNotLogin').removeClass('hidden');
+            }
+         };
+
+         var logout = function(){
+             $.ajax({url: '/logout', success: function(){applyLoginStatus(false);}});
+         };
+
+        var validate=function(){
+            var loginForm = $('#loginForm');
+            clearErrors(loginForm);
+            var isValid=true;
+            isValid = validateEmail(loginForm.find('#emailGroup')) && isValid;
+            isValid = validatePassword(loginForm.find('#passwordGroup')) && isValid;
+            return isValid;
+        };
+
+        var initHeader = function(){
+            $('#loginForm').on('submit', function(e) {
+                e.preventDefault();
+                if (validate()){
+                    $.post($(this).attr('action'), $(this).serialize(),function(data) {
+                        clearErrors($('#loginForm'));
+                        $.each(data, function(key, element) {
+                            var loginForm = $('#loginForm');
+                            if (element!==null){
+                                setError(loginForm.find('#'+key+'Group'),element);
+                            };
+                        });
+                        if (!data.loginStatus){
+                            $('#errorBlock').removeClass('hidden');
+                        } else {
+                            $('#errorBlock').addClass('hidden');
+                            $('#loginDialog').find('button[data-dismiss=modal]').click();
+                            applyLoginStatus(true);
+                        }
+                    }, "json");
+                };
+            });
+
+            @if(request().cookie("auth")!=null){
+                applyLoginStatus(true);
+            } else { applyLoginStatus(false); }
+        }
+</script>
+</body>
+</html>

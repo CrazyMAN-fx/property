@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Избранное</title>
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-theme.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-glyphicons.css">
+    <link rel="stylesheet" href="/assets/stylesheets/normalize.css">
+    <script src="/assets/javascripts/jquery-2.1.1.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/bootstrap.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jstorage.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/validation.support.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/favourite.support.js" type="text/javascript"></script>
+    <style>
+        .centered {
+        float: none;
+        margin-left: auto;
+        margin-right: auto;
+        }
+
+        .ad-thumbnail{
+        width: 80px;
+        height: 80px;
+        }
+
+        .ad-glyphicon{
+        margin-top: 5px;
+        margin-bottom: 5px;
+        margin-right: 5px;
+        font-size: 25px;
+        }
+
+        .ad-comment-active{
+        color: #00FF00;
+        }
+
+        .ad-comment-not-active{
+        color: #C0C0C0;
+        }
+    </style>
+</head>
+<body>
+@views.html.header()
+
+<script type="text/javascript">
+var favList;
+var currentFav;
+var checkAll=function(){
+    if ($('.checkAll').prop('checked')){
+        $('tr[advId]').find('input[type=checkbox]').prop('checked', true);
+    } else {
+        $('tr[advId]').find('input[type=checkbox]').prop('checked', false);
+    }
+};
+var removeChecked=function(){
+    var trs=[];
+    $.each($('#favTable').find('.advTr').not('.rowTemplate'), function(index, tr){
+        if ($(tr).find('input:checked').length!==0){
+            trs.push($(tr));
+        }
+    });
+    $.each(trs, function(index,tr){
+        removeInFav(userAuthStatus, tr.attr('advId'));
+        tr.remove();
+    });
+};
+var switchCommentIcon=function(commentIcon, active){
+    if (active){
+        commentIcon.removeClass('ad-comment-not-active');
+        commentIcon.addClass('ad-comment-active');
+    } else {
+        commentIcon.addClass('ad-comment-not-active');
+        commentIcon.removeClass('ad-comment-active');
+    }
+};
+var saveComment=function(){
+    var comment=$('#commentArea').val();
+    if (comment!==currentFav.comment){
+        currentFav.comment=comment;
+        addInFav(userAuthStatus, currentFav.advId, comment);
+        switchCommentIcon($('[advId='+currentFav.advId+']').find('.glyphicon-comment'), comment!=='');
+    }
+    $('#commentDialog').modal('toggle');
+};
+var initFavTable=function(){
+    listInFav(userAuthStatus, function(favList_){
+        var favTable=$('#favTable');
+        favTable.find('tr[advId]').remove();
+        favList=favList_;
+        var trTemplate=favTable.find('tr.rowTemplate');
+        var favTableContent=document.createDocumentFragment();
+        $.each(favList, function(index,object){
+            var tr=$(trTemplate[0].cloneNode(true));
+            tr.removeClass('hidden').removeClass('rowTemplate');
+            tr.attr('advId',object.advId);
+            var commentIcon = tr.find('.glyphicon-comment');
+            if (object.comment!==''){
+                switchCommentIcon(commentIcon, true);
+            }
+            if (object.advPreview!==undefined && object.advPreview.titleLink!==null){
+                tr.find('.ad-thumbnail').attr('src', '/get_image?id='+object.advPreview.titleLink.linkId+'thumbnail');
+            }
+            if (object.advPreview!==undefined){
+                tr.find('.advTitle').text(object.advPreview.title).attr('href','/show_property?id='+object.advId);
+                tr.find('.advPrice').text(object.advPreview.price);
+            } else {
+                tr.find('.advTitle').text('В разработке').attr('href','/show_property?id='+object.advId);
+            }
+            commentIcon.click(function(){
+                currentFav=getFavById(object.advId, favList);
+                $('#commentArea').val(currentFav.comment);
+                $('#commentDialog').modal('toggle');
+            });
+            favTableContent.appendChild(tr[0]);
+        });
+        favTable[0].appendChild(favTableContent);
+    });
+};
+
+$(function() {
+    initHeader();
+
+    var oldApplyLoginStatus=applyLoginStatus;
+        applyLoginStatus=function(isLogin){
+        oldApplyLoginStatus(isLogin);
+        initFavTable();
+    };
+    initFavTable();
+});
+</script>
+<div class="container-fluid" style="max-width: 600px;">
+    <div class="row">
+        <div class="col-lg-12 table-responsive">
+            <table class="table" id="favTable">
+                <tr>
+                    <td>
+                        <input type="checkbox" class="checkAll" onclick="checkAll();">
+                    </td>
+                    <td>
+                        <button class="btn btn-default" onclick="removeChecked();">
+                            Удалить
+                            <span class="glyphicon glyphicon-trash"></span>
+                        </button>
+                    </td>
+                </tr>
+                <tr class="rowTemplate hidden advTr">
+                    <td>
+                        <input type="checkbox">
+                    </td>
+                    <td>
+                        <img class="ad-thumbnail" src="http://www.carscollection.net/d/16531-4/honda-car+wallpapers-091.jpg">
+                    </td>
+                    <td>
+                        <a class="advTitle"></a>
+                        <br>
+                        <label class="advPrice bg-info"></label>
+                    </td>
+                    <td>
+                        <span class="glyphicon glyphicon-comment ad-comment-not-active ad-glyphicon pull-right"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="commentDialog" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"
+     data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                        class="sr-only">Close</span></button>
+                <h3 class="modal-title text-center" id="myModalLabel">
+                    Пометка
+                    <span class="glyphicon glyphicon-comment ad-comment-not-active"></span>
+                </h3>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <div class="row">
+                        <textarea id="commentArea" class="form-control" rows="5"></textarea>
+                    </div>
+                    <br>
+                    <div class="row text-center">
+                        <button type="button" class="btn btn-success" onclick="saveComment();">Сохранить</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

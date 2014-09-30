@@ -1,0 +1,872 @@
+@(filterP: String)
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Поиск квартир</title>
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-theme.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-glyphicons.css">
+    <link rel="stylesheet" href="/assets/stylesheets/normalize.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-switch.css">
+    <script src="/assets/javascripts/jquery-2.1.1.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/bootstrap.js" type="text/javascript"></script>
+    <script src="http://api-maps.yandex.ru/2.0/?load=package.full&lang=ru_RU" type="text/javascript"></script>
+    <script src="/assets/javascripts/placeholders.jquery.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/validation.support.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.jcarousel.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/bootstrap-switch.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/ymaps_editable_circle-0.1.5.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.history.js" type="text/javascript"></script>
+    <style type="text/css">
+        .jCarousel {
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        }
+
+        .jCarousel ul {
+        width: 20000em;
+        position: relative;
+
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        }
+
+        .jCarousel li {
+        float: left;
+        }
+
+        .content{
+        margin-left: auto;
+        margin-right: auto;
+        }
+
+        .ad-thumbnail{
+        width: 80px;
+        height: 80px;
+        }
+
+        .ad-glyphicon{
+        margin-top: 5px;
+        margin-bottom: 5px;
+        margin-right: 5px;
+        font-size: 25px;
+        }
+
+        .ad-glyphicon-map-active{
+        color: #33CC00;
+        }
+
+        .ad-glyphicon-map-not-active{
+        color: #0099CC;
+        }
+
+        select.input-sm {
+        height: 24px;
+        padding: 0px 3px;
+        width: 175px;
+        }
+
+        input.input-sm {
+        height: 24px;
+        padding: 0px 6px;
+        width: 175px;
+        margin: 0px;
+        }
+
+        textarea.input-sm {
+        padding: 0px 3px;
+        }
+
+        .input-group-addon.input-sm {
+        height: 24px;
+        padding: 0px 3px;
+        margin: 0px;
+        }
+
+        .btn-sm{
+        padding: 3px 6px;
+        }
+
+        .control-label{
+        text-align: left !important;
+        font-size: 12px;
+        margin-bottom: 0px;
+        width: 175px;
+        }
+
+        .pull-bottom {
+        display: inline-block;
+        vertical-align: bottom;
+        float: none;
+        padding-left: 5px;
+        padding-right: 5px;
+        }
+
+        .centered {
+        float: none;
+        margin-left: auto;
+        margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+@views.html.header()
+<script type="text/javascript">
+var yandexMap=null;
+var searchCircle=null;
+var advPlaceMarks=[];
+var placeMarksClusterer=null;
+var selectedAdvId=null;
+var yandexMapInitialized=false;
+var refreshFieldsVisibilityEnabled=true;
+var filterParams = @Html(filterP);
+
+var findPlaceMarkByAdvId=function(advId){
+    var advPlaceMark=null;
+    $.each(advPlaceMarks, function(i, placeMark){
+        if (placeMark.advId===advId){
+            advPlaceMark=placeMark;
+            return false;
+        }
+    });
+    return advPlaceMark;
+};
+var refreshMapSize=function(){
+    var mapContainer=$('#mapContainer');
+    var mapContainerH=mapContainer.width();
+    if (mapContainerH>400){
+        mapContainerH=400;
+    }
+    mapContainer.height(mapContainerH);
+    if (yandexMapInitialized){
+        yandexMap.container.fitToViewport();
+    }
+};
+var getURLParams=function(){
+    var url=History.getState().url;
+    var urlParams=[];
+    var qIndex=url.lastIndexOf('?');
+    if (qIndex>-1 && qIndex<(url.length-1)){
+        var paramsSplit=url.substring(qIndex+1, url.length-1).split('&');
+        for (i=0; i<paramsSplit.length; i++){
+            var param=paramsSplit[i].split('=');
+            urlParams.push({name: param[0], value: param[1]});
+        }
+    }
+    return urlParams;
+};
+var setSearchCircle = function(coords, radius) {
+    if (searchCircle!==null){
+        searchCircle.editor.stopEditing();
+        yandexMap.geoObjects.remove(searchCircle);
+    }
+    searchCircle = editableCircleFactory(new ymaps.geometry.Circle(coords, radius), {}, searchCircleOptions);
+    yandexMap.geoObjects.add(searchCircle);
+    searchCircle.editor.startEditing();
+};
+var searchCircleOptions = {
+    minRadius:  1000,
+    maxRadius:  50000,
+    // дефолтный радиус в метрах
+    // 0 - в зависимости от зума
+    defaultRadius: 0,
+    fillColor: '#DB709377',
+    fillOpacity: 0.5,
+    strokeColor: '#990066',
+    strokeOpacity: 0.8
+};
+var settingsFromURL=function(){
+    var urlParams=getURLParams();
+    if (urlParams.length>0){
+        var searchParamFields=$('#requestForm').find('[name]');
+        searchParamFields.val('NULL').prop('checked', false);
+        $.each(urlParams, function(i, param){
+            searchParamFields.filter("select[name='"+param.name+"']").val(param.value);
+            searchParamFields.filter("input[type='checkbox'][name='"+param.name+"']").prop('checked', param.value);
+            searchParamFields.filter("input[type='number'][name='"+param.name+"']").val(param.value);
+        });
+        if (yandexMapInitialized){
+            var cLatitude=53.188713;
+            var cLongitude=50.136898;
+            var radius=0;
+            $.each(urlParams, function(i, param){
+                if (param.name==='cLatitude'){
+                    cLatitude=param.value;
+                } else if (param.name==='cLongitude'){
+                    cLongitude=param.value;
+                } else if (param.name==='radius'){
+                    radius=param.value;
+                }
+            });
+            yandexMap.setCenter([cLatitude,cLongitude]);
+            setSearchCircle([cLatitude,cLongitude], radius);
+        }
+    }
+};
+var refreshFieldsVisibility=function(){
+    if (refreshFieldsVisibilityEnabled){
+        var requestForm=$('#requestForm');
+        var visibleFilterParamControls=requestForm.find('.filterParam').filter(":visible");
+        var searchParamFields=requestForm.find('[name]');
+        var longestFilerParam;
+        $.each(filterParams.filterParams, function(i1, filterParam){
+            var filterParamStatus=true;
+            $.each(filterParam.conditions, function(i2, condition){
+                var filterParamControl=visibleFilterParamControls.filter('#'+condition.name);
+                if (filterParamControl.length!==1 || filterParamControl.val()!==condition.value){
+                    filterParamStatus=false;
+                    return false;
+                }
+             });
+             if (filterParamStatus && (longestFilerParam===undefined || filterParam.conditions.length>longestFilerParam.conditions.length)){
+                longestFilerParam=filterParam;
+             }
+        });
+        $.each(searchParamFields, function(i,field){
+            var fieldName=$(field).attr('name');
+            if ($.inArray(fieldName, longestFilerParam.availableFields)===-1){
+                $(field).val('');
+                requestForm.find('#'+fieldName+'Container').addClass('hidden');
+            } else {
+                requestForm.find('#'+fieldName+'Container').removeClass('hidden');
+            }
+        });
+    }
+};
+
+$(function() {
+    initHeader();
+
+    var indexCarousel=$('#indexCarousel');
+    var requestForm=$('#requestForm');
+    var mapContainer=$('#mapContainer');
+    var smallScreenSearchDiv=$('#smallScreenSearchDiv');
+    var notSmallScreenSearchDiv=$('#notSmallScreenSearchDiv');
+    var smallScreenMapContainerDiv=$('#smallScreenMapContainerDiv');
+    var notSmallScreenMapContainerDiv=$('#notSmallScreenMapContainerDiv');
+    var headerToggle = $('button[data-target=#site-header]');
+    var searchParamFields=requestForm.find('[name]');
+    var filterParamControls = requestForm.find('.filterParam');
+    var advTable=$('#advTable');
+
+    var isSmallScreen=function(){
+        return headerToggle.is(':visible');
+    };
+    var makeSearchRequestParamsUrl=function(){
+        var params=[];
+        $.each(searchParamFields, function(i, field){
+            if ($(field).is('select') && $(field).val()!=='NULL' && $(field).val()!==null){
+                params.push({name: $(field).attr('name'), value: $(field).val()});
+            } else if ($(field).is(':checkbox') && $(field).is(":checked")){
+                params.push({name: $(field).attr('name'), value: 'on'});
+            } else if ($(field).attr('type')==='number' && $(field).val()!==''){
+                params.push({name: $(field).attr('name'), value: $(field).val()});
+            }
+        });
+        params.push({name: 'cLatitude', value: searchCircle.geometry.getCoordinates()[0]});
+        params.push({name: 'cLongitude', value: searchCircle.geometry.getCoordinates()[1]});
+        params.push({name: 'radius', value: searchCircle.geometry.getRadius()});
+        return ("?"+$.param(params));
+    };
+    var renderData=function(advData){
+        var advTableContent=document.createDocumentFragment();
+        var advTableTrTemplate=advTable.find('.rowTemplate');
+        $.each(advData, function(i, adv){
+            var tr=$(advTableTrTemplate[0].cloneNode(true));
+            tr.removeClass('rowTemplate').removeClass('hidden');
+            tr.attr('advId',adv.id);
+            if (adv.titleLink!==undefined){
+                tr.find('.ad-thumbnail').attr('src','/get_image?id='+adv.titleLink.linkId+'thumbnail');
+            }
+            tr.find('.advTitle').text(adv.title).attr('href','/show_property?id='+adv.id);
+            tr.find('.advPrice').text(adv.price);
+            tr.find('.glyphicon-map-marker').click(function() {
+                advPlaceMarkClicked(adv.id, '-1');
+            });
+            advTableContent.appendChild(tr[0]);
+        });
+        advTable.find('tr').not('.rowTemplate').remove();
+        advTable[0].appendChild(advTableContent);
+
+        selectedAdvId=null;
+        placeMarksClusterer.removeAll();
+        advPlaceMarks=[];
+        $.each(advData, function(i, adv){
+            var advPlaceMark=new ymaps.GeoObject({
+                geometry: {type: "Point", coordinates: [adv.latitude, adv.longitude]}
+            });
+            advPlaceMark.advId=adv.id;
+            advPlaceMark.events.add("click", function () {
+                advPlaceMarkClicked(adv.id, '1');
+            });
+            advPlaceMarks.push(advPlaceMark);
+        });
+        placeMarksClusterer.add(advPlaceMarks);
+        yandexMap.setCenter([searchCircle.geometry.getCoordinates()[0],searchCircle.geometry.getCoordinates()[1]]);
+    };
+    var advPlaceMarkClicked=function(advId, indexChange){
+        if (isSmallScreen()){
+            $(window).scrollTop(0);
+            indexCarousel.jcarousel('scroll', indexChange, true);
+        }
+        if (selectedAdvId!==null){
+            unSelectAdv(selectedAdvId);
+        }
+        selectAdv(advId);
+        selectedAdvId=advId;
+    };
+    var unSelectAdv=function(advId){
+        var tr=advTable.find('tr[advId='+advId+']');
+        tr.removeClass('bg-info');
+        tr.find('.glyphicon-map-marker').removeClass('ad-glyphicon-map-active').addClass('ad-glyphicon-map-not-active');
+        var advPlaceMark=findPlaceMarkByAdvId(advId);
+        var cluster=placeMarksClusterer.getObjectState(advPlaceMark).cluster;
+        advPlaceMark.options.set('preset', 'twirl#blueIcon');
+        if (cluster!==undefined){
+            cluster.options.set('icons', ymaps.option.presetStorage.get('twirl#blueClusterIcons').clusterIcons);
+        }
+    };
+    var selectAdv=function(advId){
+        var tr=advTable.find('tr[advId='+advId+']');
+        tr.addClass('bg-info');
+        tr.find('.glyphicon-map-marker').addClass('ad-glyphicon-map-active').removeClass('ad-glyphicon-map-not-active');
+        var advPlaceMark=findPlaceMarkByAdvId(advId);
+        var cluster=placeMarksClusterer.getObjectState(advPlaceMark).cluster;
+        advPlaceMark.options.set('preset', 'twirl#greenIcon');
+        if (cluster!==undefined){
+            cluster.options.set('icons', ymaps.option.presetStorage.get('twirl#greenClusterIcons').clusterIcons);
+        }
+    };
+    var requestAndRender=function(){
+        var searchRequestParamsUrl=makeSearchRequestParamsUrl();
+        $.get(requestForm.attr('action')+searchRequestParamsUrl, function(data) {
+            History.pushState(data.data, 'All property', searchRequestParamsUrl);
+        });
+    };
+
+    indexCarousel.on('jcarousel:create jcarousel:reload', function() {
+        var innerWidth=indexCarousel.innerWidth();
+        if (isSmallScreen()){
+
+            if (!$.contains(smallScreenSearchDiv,requestForm)){
+                smallScreenSearchDiv.append(requestForm.detach());
+            }
+            if (!$.contains(smallScreenMapContainerDiv,mapContainer)){
+                smallScreenMapContainerDiv.append(mapContainer.detach());
+            }
+        } else {
+            if (!$.contains(notSmallScreenSearchDiv,requestForm)){
+                notSmallScreenSearchDiv.append(requestForm.detach());
+            }
+            if (!$.contains(notSmallScreenMapContainerDiv,mapContainer)){
+                notSmallScreenMapContainerDiv.append(mapContainer.detach());
+            }
+        }
+        indexCarousel.jcarousel('items').css('width', innerWidth + 'px');
+        refreshMapSize();
+    }).jcarousel({
+        vertical: false
+    });
+
+    indexCarousel.find('.jcarousel-prev').jcarouselControl({
+        target: '-=1',
+        carousel: indexCarousel
+    });
+    indexCarousel.find('.jcarousel-next').jcarouselControl({
+        target: '+=1',
+        carousel: indexCarousel
+    });
+    indexCarousel.find('.jcarousel-first').jcarouselControl({
+        target: '0',
+        carousel: indexCarousel
+    });
+
+    $('#searchArea').click(function(){
+        $(window).scrollTop(0);
+        indexCarousel.jcarousel('scroll', -1, true);
+    });
+
+    requestForm.find('#formSubmit').click(function(){
+        if (yandexMapInitialized){
+            requestAndRender();
+        }
+    });
+
+    filterParamControls.change(function() {refreshFieldsVisibility();});
+    $('.yesNoToggle').bootstrapSwitch();
+    refreshFieldsVisibility();
+
+    (function(window,undefined){
+        History.Adapter.bind(window,'statechange',function(){
+            renderData(History.getState().data);
+        });
+    })(window);
+});
+
+ymaps.ready(function() {
+    yandexMap = new ymaps.Map("mapContainer", {
+        behaviors: ['default','scrollZoom', 'drag'],
+        center: [53.188713, 50.136898],
+        zoom: 9
+    });
+
+    var centerSearchCircleControl = new ymaps.control.Button({
+        data: {
+            title: 'Область поиска в центр'
+        }
+    }, {
+        layout: ymaps.templateLayoutFactory.createClass(
+            "<button type='button' style='width:27px; height:27px;' title='$[data.title]'>"+
+            "<span class='glyphicon glyphicon-map-marker'></span></button>")
+    });
+    centerSearchCircleControl.events.add('click', function (e) {
+        setSearchCircle(yandexMap.getCenter(), 0);
+    });
+
+    yandexMap.controls.add('zoomControl', { left: 5, top: 5 }).add('mapTools', { left: 35, top: 5 })
+    .add(new ymaps.control.TrafficControl(),{right: 5, top: 5 }).add(centerSearchCircleControl,{left: 37, top: 35 });
+
+    placeMarksClusterer=new ymaps.Clusterer();
+    placeMarksClusterer.createCluster=function(center, geoObjects){
+        var cluster = ymaps.Clusterer.prototype.createCluster.call(placeMarksClusterer, center, geoObjects);
+        if (selectedAdvId!==null && $.inArray(findPlaceMarkByAdvId(selectedAdvId),geoObjects)!==-1){
+            cluster.options.set('icons', ymaps.option.presetStorage.get('twirl#greenClusterIcons').clusterIcons);
+        }
+        return cluster;
+    };
+    yandexMap.geoObjects.add(placeMarksClusterer);
+    setSearchCircle(yandexMap.getCenter(), 0);
+    refreshMapSize();
+
+    yandexMapInitialized=true;
+
+    if (getURLParams().length>0){
+        refreshFieldsVisibilityEnabled=false;
+        settingsFromURL();
+        refreshFieldsVisibilityEnabled=true;
+        refreshFieldsVisibility();
+        $('#formSubmit').click();
+    }
+});
+
+
+
+
+
+</script>
+<div class="jCarousel content" id="indexCarousel">
+<ul>
+<li class="visible-xs-block">
+<div class="container-fluid centered" style="width:376px;">
+<div class="row">
+    <a class="btn pull-right jcarousel-next">
+        Результаты
+        <span class="glyphicon glyphicon-chevron-right"></span>
+    </a>
+</div>
+<div class="row" id="smallScreenSearchDiv">
+<form id="requestForm" action="/search" class="bg-info"
+      style="padding-bottom:5px; border-style: solid; border-width: 1px; border-color: #006666;">
+<div class="pull-bottom" id="actionTypeContainer">
+    <label for="actionType" class="control-label">Я хочу</label>
+
+    <select class="form-control filterParam input-sm" name="actionType" id="actionType">
+        <option value="SELL" selected="selected">Купить</option>
+        <option value="RENT">Взять в аренду</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="categoryTypeContainer">
+    <label for="categoryType" class="control-label">Категория</label>
+
+    <select class="form-control filterParam input-sm" name="categoryType" id="categoryType">
+        <option value="APART" selected="selected">Квартиры</option>
+        <option value="ROOM">Комнаты</option>
+        <option value="HOUSE">Дома, дачи, коттеджи</option>
+        <option value="LAND">Земельные участки</option>
+        <option value="GARAGE">Гаражи и машиноместа</option>
+        <option value="COMM">Коммерческая недвижимость</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="flatPropertyKindContainer">
+    <label for="flatPropertyKind" class="control-label">Вид объекта</label>
+
+    <select class="form-control filterParam input-sm" name="flatPropertyKind" id="flatPropertyKind">
+        <option value="NULL"></option>
+        <option value="NEW">Новостройка</option>
+        <option value="NOT_NEW">Вторичка</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="housePropertyKindContainer">
+    <label for="housePropertyKind" class="control-label">Вид объекта</label>
+
+    <select class="form-control filterParam input-sm" name="housePropertyKind" id="housePropertyKind">
+        <option value="NULL"></option>
+        <option value="HOUSE">Дом</option>
+        <option value="DACHA">Дача</option>
+        <option value="COTTAGE">Коттедж</option>
+        <option value="TOWNHOUSE">Таунхаус</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="garagePropertyKindContainer">
+    <label for="garagePropertyKind" class="control-label">Вид объекта</label>
+
+    <select class="form-control filterParam input-sm" name="garagePropertyKind" id="garagePropertyKind">
+        <option value="NULL"></option>
+        <option value="GARAGE">Гараж</option>
+        <option value="PLACE">Машиноместо</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="commPropertyKindContainer">
+    <label for="commPropertyKind" class="control-label">Вид объекта</label>
+
+    <select class="form-control filterParam input-sm" name="commPropertyKind" id="commPropertyKind">
+        <option value="NULL"></option>
+        <option value="HOTEL">Гостинница</option>
+        <option value="OFFICE">Офисное помещение</option>
+        <option value="FREE">Помещение свободного назначения</option>
+        <option value="INDUST">Производственное помещение</option>
+        <option value="WAREHOUSE">Складское помещение</option>
+        <option value="COMM">Торговое помещение</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="roomNumberContainer">
+    <label for="roomNumber" class="control-label">Число комнат</label>
+
+    <select class="form-control input-sm" name="roomNumber" id="roomNumber">
+        <option value="NULL"></option>
+        <option value="0">Студия</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">больше 5</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="floorTypeContainer">
+    <label for="floorType" class="control-label">Этаж</label>
+
+    <select class="form-control input-sm" name="floorType" id="floorType">
+        <option value="NULL"></option>
+        <option value="NOT_FIRST">Не первый</option>
+        <option value="NOT_FIRST_NOT_LAST">Не первый и не последний</option>
+        <option value="NOT_LAST">Не последний</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="materialTypeContainer">
+    <label for="materialType" class="control-label">Тип дома</label>
+
+    <select class="form-control input-sm" name="materialType" id="materialType">
+        <option value="NULL"></option>
+        <option value="MONO">Монолитный</option>
+        <option value="PANEL">Панельный</option>
+        <option value="BLOCK">Блочный</option>
+        <option value="BRICK">Кирпичный</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="overallSqMinContainer">
+    <label for="overallSqMin" class="control-label">Общ. площадь больше</label>
+
+    <input type="number" name="overallSqMin" id="overallSqMin"
+           class="form-control input-sm">
+</div>
+
+<div class="pull-bottom" id="landSqMaxContainer">
+    <label for="landSqMax" class="control-label">Пл. участка больше</label>
+
+    <input type="number" name="landSqMax" id="landSqMax"
+           class="form-control input-sm">
+</div>
+
+<div class="pull-bottom" id="livingSqMaxContainer">
+    <label for="livingSqMax" class="control-label">Жил. площадь больше</label>
+
+    <input type="number" name="livingSqMax" id="livingSqMax"
+           class="form-control input-sm">
+</div>
+
+<div class="pull-bottom" id="renovationTypeContainer">
+    <label for="renovationType" class="control-label">Тип ремонта</label>
+
+    <select class="form-control input-sm" name="renovationType" id="renovationType">
+        <option value="NULL"></option>
+        <option value="NO">Нет</option>
+        <option value="TYPICAL">Обычный</option>
+        <option value="EURO">Евро</option>
+        <option value="DESIGN">Дизайнерский</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="securityTypeContainer">
+    <label for="securityType" class="control-label">Меры безопасности</label>
+
+    <select class="form-control input-sm" name="securityType" id="securityType">
+        <option value="NULL"></option>
+        <option value="NO">Нет</option>
+        <option value="INTERCOM">Домофон</option>
+        <option value="CONCIERGE">Консьерж</option>
+        <option value="GUARD">Охраняемая территория</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="distFromCityMaxContainer">
+    <label for="distFromCityMax" class="control-label">Расстояние до города меньше</label>
+
+    <select class="form-control input-sm" name="distFromCityMax" id="distFromCityMax">
+        <option value="NULL"></option>
+        <option value="0">В черте города</option>
+        <option value="1">1 км</option>
+        <option value="2">2 км</option>
+        <option value="3">3 км</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="landTypeContainer">
+    <label for="landType" class="control-label">Категория земли</label>
+
+    <select class="form-control input-sm" name="landType" id="landType">
+        <option value="NULL"></option>
+        <option value="LIVING">Поселений (ИЖС)</option>
+        <option value="AGRIC">Сельхозназначения (СНТ, ДНП)</option>
+        <option value="INDUST">Промназначения</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="commClassContainer">
+    <label for="commClass" class="control-label">Класс зданния</label>
+
+    <select class="form-control input-sm" name="commClass" id="commClass">
+        <option value="NULL"></option>
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+        <option value="D">D</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="priceMinContainer">
+    <label for="priceMin" class="control-label">Цена больше</label>
+
+    <input type="number" name="priceMin" id="priceMin"
+           class="form-control input-sm">
+</div>
+
+<div class="pull-bottom" id="priceMaxContainer">
+    <label for="priceMin" class="control-label">Цена меньше</label>
+
+    <input type="number" name="priceMax" id="priceMax"
+           class="form-control input-sm">
+</div>
+
+<div class="pull-bottom" id="rentKindContainer">
+    <label for="rentKind" class="control-label">Тип аренды</label>
+
+    <select class="form-control input-sm" name="rentKind" id="rentKind">
+        <option value="NULL"></option>
+        <option value="LONG">На длительный срок</option>
+        <option value="SHORT">Посуточно</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="rentPriceMaxContainer">
+    <label for="rentPriceMax" class="control-label">Арендная плата меньше</label>
+
+    <input type="number" name="rentPriceMax" id="rentPriceMax"
+           class="form-control input-sm">
+</div>
+
+<div class="pull-bottom" id="depositMaxContainer">
+    <label for="depositMax" class="control-label">Размер залога меньше</label>
+
+    <input type="number" name="depositMax" id="depositMax"
+           class="form-control input-sm">
+</div>
+
+<div class="pull-bottom" id="garageExsContainer">
+    <label for="garageExs" class="control-label">Есть гараж</label>
+
+    <select class="form-control input-sm" name="garageExs" id="garageExs">
+        <option value="">Не важно</option>
+        <option value="on">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="balconyContainer">
+    <label for="balcony" class="control-label">Есть балкон/лоджия</label>
+
+    <select class="form-control input-sm" name="balcony" id="balcony">
+        <option value="" selected="selected">Не важно</option>
+        <option value="on">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="gasContainer">
+    <label for="gas" class="control-label">Есть газ</label>
+
+    <select class="form-control input-sm" name="gas" id="gas">
+        <option value="">Не важно</option>
+        <option value="on" selected="selected">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="electricityContainer">
+    <label for="electricity" class="control-label">Есть электричество</label>
+
+    <select class="form-control input-sm" name="electricity" id="electricity">
+        <option value="">Не важно</option>
+        <option value="on" selected="selected">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="heatingContainer">
+    <label for="heating" class="control-label">Есть отопление</label>
+
+    <select class="form-control input-sm" name="heating" id="heating">
+        <option value="">Не важно</option>
+        <option value="on" selected="selected">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="waterContainer">
+    <label for="water" class="control-label">Есть водоснабжение</label>
+
+    <select class="form-control input-sm" name="water" id="water">
+        <option value="">Не важно</option>
+        <option value="on" selected="selected">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="sewerageContainer">
+    <label for="sewerage" class="control-label">Есть канализация</label>
+
+    <select class="form-control input-sm" name="sewerage" id="sewerage">
+        <option value="">Не важно</option>
+        <option value="on" selected="selected">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="internetContainer">
+    <label for="internet" class="control-label">Есть интернет</label>
+
+    <select class="form-control input-sm" name="internet" id="internet">
+        <option value="" selected="selected">Не важно</option>
+        <option value="on">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="ownTimeContainer">
+    <label for="ownTime" class="control-label">Более 3 лет в собственности</label>
+
+    <select class="form-control input-sm" name="ownTime" id="ownTime">
+        <option value="" selected="selected">Не важно</option>
+        <option value="on">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom" id="creditContainer">
+    <label for="credit" class="control-label">Возможна кредитная сделка</label>
+
+    <select class="form-control input-sm" name="credit" id="credit">
+        <option value="" selected="selected">Не важно</option>
+        <option value="on">Да</option>
+    </select>
+</div>
+
+<div class="pull-bottom visible-xs-inline" id="addressContainer">
+    <button class="btn btn-default btn-sm" type="button" id="searchArea" style="width: 175px; margin-top:5px;">Указать
+        область поиска
+        <span class="glyphicon glyphicon-map-marker"></span>
+    </button>
+</div>
+
+<div class="pull-bottom" id="formSubmitContainer" style="width: 185px;">
+    <button class="btn btn-success btn-sm" type="button" id="formSubmit" style="margin-top:5px;">
+        Найти
+        <span class="glyphicon glyphicon-search"></span>
+    </button>
+</div>
+</form>
+</div>
+</div>
+</li>
+<li>
+    <div class="container-fluid">
+        <div class="row visible-xs-block">
+            <a class="btn pull-left jcarousel-prev">
+                <span class="glyphicon glyphicon-chevron-left"></span>
+                Поиск
+            </a>
+            <a class="btn pull-right jcarousel-next">
+                Карта
+                <span class="glyphicon glyphicon-chevron-right"></span>
+            </a>
+        </div>
+        <div class="row centered" style="margin-bottom: 20px; width:1130px;">
+            <div id="notSmallScreenSearchDiv">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-6 col-sm-6 table-responsive">
+                <table class="table table-hover" id="advTable">
+                    <tr class="rowTemplate hidden">
+                        <td>
+                            <img class="ad-thumbnail"
+                                 src="http://www.carscollection.net/d/16531-4/honda-car+wallpapers-091.jpg">
+                        </td>
+                        <td>
+                            <a class="advTitle" target="_blank"></a>
+                            <br>
+                            <label class="advPrice bg-info"></label>
+                        </td>
+                        <td>
+                            <span class="glyphicon glyphicon-map-marker ad-glyphicon ad-glyphicon-map-not-active pull-right text-center"></span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-lg-6 col-sm-6" id="notSmallScreenMapContainerDiv"></div>
+        </div>
+    </div>
+</li>
+<li class="visible-xs-block">
+    <div class="container-fluid">
+        <div class="row">
+            <a class="btn pull-left jcarousel-prev">
+                <span class="glyphicon glyphicon-chevron-left"></span>
+                Результаты
+            </a>
+            <a class="btn pull-right jcarousel-first">
+                Поиск
+                <span class="glyphicon glyphicon-chevron-right"></span>
+            </a>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 col-xs-12" id="smallScreenMapContainerDiv">
+                <div id="mapContainer"></div>
+            </div>
+        </div>
+    </div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

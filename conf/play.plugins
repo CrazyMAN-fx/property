@@ -1,0 +1,3 @@
+1500:file_storage.S3Plugin
+1500:jobs.JobsPlugin
+550:com.typesafe.plugin.RedisPlugin

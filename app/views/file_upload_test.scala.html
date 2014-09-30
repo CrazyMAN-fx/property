@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Форма регистрации</title>
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-theme.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-glyphicons.css">
+    <link rel="stylesheet" href="/assets/stylesheets/normalize.css">
+    <link rel="stylesheet" href="/assets/stylesheets/jquery.fileupload.css">
+    <script src="/assets/javascripts/jquery-2.1.1.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/bootstrap.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/placeholders.jquery.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.ui.widget.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/load-image.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/canvas-to-blob.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.iframe-transport.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.fileupload.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.fileupload-process.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.fileupload-image.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.fileupload-validate.js" type="text/javascript"></script>
+    <style>
+        .centered {
+        float: none;
+        margin-left: auto;
+        margin-right: auto;
+        }
+
+        .bar {
+        height: 18px;
+        background: green;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+
+    <div class="row">
+    <button onclick="$('#fileupload').trigger('click');">Загрузить</button>
+    </div>
+
+    <div class="row" id="filesContainer">
+    </div>
+</div>
+
+<script>
+var uploadedFiles = [];
+var removeImage=function(url, name){
+    $.ajax({url: url, success: function(){
+        var fileName=name.substr(0, name.lastIndexOf('.'));
+        $('#'+fileName).remove();
+        uploadedFiles.splice($.inArray(name, uploadedFiles),1);
+    }});
+};
+
+$(function () {
+    $.widget('blueimp.fileupload', $.blueimp.fileupload, {
+        processActions: {
+            validate: function (data, options) {
+                if (options.disabled) {
+                    return data;
+                }
+                var dfd = $.Deferred(),
+                    file = data.files[data.index];
+                if (!options.acceptFileTypes.test(file.type) || $.inArray(file.name, uploadedFiles)>-1) {
+                    file.error = 'Invalid file type.';
+                    dfd.rejectWith(this, [data]);
+                } else {
+                    dfd.resolveWith(this, [data]);
+                }
+                return dfd.promise();
+            }
+        }
+    });
+
+    $('#fileupload').fileupload({
+        url: '/upload_files/',
+        acceptFileTypes: /(\.|\/)(gif|jpe?g|png)$/i,
+        imageForceResize: true,
+        imageType: 'image/jpeg',
+        disableImageResize: false,
+        forceIframeTransport: true,
+        imageMaxWidth: 3200,
+        imageMaxHeight: 1200,
+        imageCrop: false
+    }).bind('fileuploadsend', function (e, data) {
+        var filesContainer = $('#filesContainer');
+        $.each(data.files, function (index, file) {
+            var fileName=file.name.substr(0, file.name.lastIndexOf('.'));
+            filesContainer.append("<div id="+fileName+" class=\"col-lg-1 text-center\"><img style=\"width: 80px; height: 80px;\">"+
+            "<button class=\"btn btn-danger btn-xs\">Удалить</button></div>");
+        });
+    }).bind('fileuploaddone', function (e, data) {
+       $.each(data.result.files, function (index, file) {
+            var fileName=file.name.substr(0, file.name.lastIndexOf('.'));
+            var imageDiv = $('#'+fileName)
+            imageDiv.find('img').attr('src',file.thumbnailUrl);
+            imageDiv.find('button').attr('onClick', 'removeImage(\"'+file.deleteUrl+'\", \"'+file.name+'\");');
+       });
+       $.each(data.files, function (index, file) {
+            uploadedFiles.push(file.name);
+       });
+    }).bind('fileuploadprogress', function (e, data) {
+    });
+});
+</script>
+<input id="fileupload" type="file" name="files[]" class="hidden">
+</body>
+</html>

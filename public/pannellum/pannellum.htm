@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>pannellum</title>
+        <meta charset="utf-8">
+        <link type="text/css" rel="Stylesheet" href="css/pannellum.css" />
+    </head>
+    
+    <body>
+        <div id="page">
+        
+        <div id="container">
+            <canvas id="canvas"></canvas>
+            <div class="world">
+                <div class="face fface"></div>
+                <div class="face bface"></div>
+                <div class="face uface"></div>
+                <div class="face dface"></div>
+                <div class="face lface"></div>
+                <div class="face rface"></div>
+            </div>
+        </div>
+        
+        <div id="panorama_info">
+            <div id="title_box"></div>
+            <div id="author_box"></div>
+        </div>
+        
+        <div id="zoomcontrols" class="controls">
+            <div id="zoom_in" onclick="zoomIn(5)" class="sprite control"></div>
+            <div id="zoom_out" onclick="zoomOut(5)" class="sprite control"></div>
+        </div>
+        
+        <div id="fullwindowtoggle_button" onclick="toggleFullWindow()" class="sprite fullwindowtoggle_button_inactive controls control"></div>
+        
+        <div id="load_box"><p>Loading...<div class="lbox"><div class="loading"></div></div></div>
+        
+        <div id="load_button" onclick="load()"><p>Click to<br>Load<br>Panorama<p></div>
+        
+        <div id="nocanvas" class="infobox"><p>Your browser does not have the necessary WebGL support to display this panorama.</p></div>
+        
+        <div id="compass" class="controls control"></div>
+        
+        <span id="about" style="display: none;"><a href="https://github.com/mpetroff/pannellum" target="_blank">Pannellum</a></span>
+        
+        <noscript><div id="nojavascript" class="infobox"><p>Javascript is required to view this panorama.<br>(It could be worse; you could need a plugin.)</p></div></noscript>
+        
+        <script type="text/javascript" src="js/libpannellum.js"></script>
+        <script type="text/javascript" src="js/RequestAnimationFrame.js"></script>
+        
+        <script type="text/javascript" src="js/pannellum.js"></script>
+        
+        </div>
+    </body>
+</html>

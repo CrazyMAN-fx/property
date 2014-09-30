@@ -1,0 +1,505 @@
+@(adv: String)
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Show property</title>
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-theme.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-glyphicons.css">
+    <style type="text/css">
+        .jCarousel {
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        }
+
+        .jCarousel ul {
+        width: 20000em;
+        position: relative;
+
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        }
+
+        .jCarousel li {
+        float: left;
+        }
+
+        .content{
+        margin-left: auto;
+        margin-right: auto;
+        }
+
+        .navigation{
+        margin-left: auto;
+        margin-right: auto;
+        }
+
+        .navigation img {
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 80px;
+        }
+
+        .jcarousel-prev{
+        float: left;
+        }
+
+        .jcarousel-next{
+        float: right;
+        }
+
+        .centered {
+        float: none;
+        margin-left: auto;
+        margin-right: auto;
+        }
+
+        .inFav-glyphicon-active{
+        color: #FF9900;
+        }
+    </style>
+    <script src="/assets/javascripts/jquery-2.1.1.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jquery.jcarousel.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/bootstrap.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/property.carousel.support.js" type="text/javascript"></script>
+    <script src="/assets/ponorado/panorado.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/placeholders.jquery.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/validation.support.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/jstorage.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/favourite.support.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var yandexMap=null;
+        var yandexMapInitialized=false;
+        var advJson = @Html(adv);
+
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var makeCheckInFav=function(){
+            checkInFav(userAuthStatus, advJson.id, function(favStatus){
+                switchFavButton(favStatus);
+            });
+        };
+        var switchFavButton=function(favStatus){
+            var inFavContainer=$('.inFavContainer');
+            if (favStatus){
+                inFavContainer.find('.inFavAddButton').addClass('hidden');
+                inFavContainer.find('.inFavRemoveButton').removeClass('hidden');
+            } else {
+                inFavContainer.find('.inFavAddButton').removeClass('hidden');
+                inFavContainer.find('.inFavRemoveButton').addClass('hidden');
+            }
+        };
+
+        var loadYandexMap=function(){
+            if (!yandexMapInitialized){
+                $.getScript("http://api-maps.yandex.ru/2.0/?load=package.full&lang=ru_RU").done(function() {
+                    ymaps.ready(function() {
+                        yandexMap = new ymaps.Map("mapContainer2", {
+                            behaviors: ['default','scrollZoom', 'drag'],
+                            center: [advJson.latitude, advJson.longitude],
+                            zoom: 9
+                        });
+
+                        yandexMap.controls.add('zoomControl', { left: 5, top: 5 }).add('mapTools', { left: 35, top: 5 })
+                        .add(new ymaps.control.TrafficControl(),{right: 5, top: 5 });
+
+                         var advPlaceMark=new ymaps.GeoObject({
+                            geometry: {type: "Point", coordinates: [advJson.latitude, advJson.longitude]}
+                        });
+                        yandexMap.geoObjects.add(advPlaceMark);
+
+                        yandexMapInitialized=true;
+                    });
+                });
+            }
+        };
+
+        $(function() {
+            var mapContainer2=$('#mapContainer2');
+            initHeader();
+
+            $('#mapContainer2').on('show.bs.collapse', function () {
+                if (!yandexMapInitialized){
+                    loadYandexMap();
+                } else {
+                    yandexMap.setCenter([advJson.latitude, advJson.longitude]);
+                }
+            }).on('shown.bs.collapse', function(){
+                mapContainer2.height(mapContainer2.width());
+                if (yandexMapInitialized){
+                    yandexMap.container.fitToViewport();
+                }
+            });
+
+            var oldApplyLoginStatus=applyLoginStatus;
+            applyLoginStatus=function(isLogin){
+                oldApplyLoginStatus(isLogin);
+                makeCheckInFav();
+            };
+
+            var imageCarouselInit=true;
+            var panoCarouselInit=false;
+            var videoCarouselInit=false;
+
+            var imageCarouselManger;
+            var videoCarouselManger;
+            var panoCarouselManger;
+
+            $('#media').find('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+              var targetUrl = e.target.toString();
+              var tab = targetUrl.substring(targetUrl.lastIndexOf('#')+1);
+              var data=[];
+              if (tab==='video'){
+                if (!videoCarouselInit){
+                    $.each(advJson.videoLinks, function(index, videoLink){
+                        data.push([videoLink.linkId, 'http://i.ytimg.com/vi/'+videoLink.linkId+'/default.jpg', videoLink.linkDescription]);
+                    });
+
+                    videoCarouselManger = new VideoCarouselManger($('#video'), data);
+                    videoCarouselManger.initialize();
+                    videoCarouselInit=true;
+                } else {
+                    videoCarouselManger.contentDivResized();
+                    videoCarouselManger.navigationDivResized();
+                }
+              } else if (tab==='pano'){
+                if (!panoCarouselInit){
+                    $.each(advJson.panoLinks, function(index, panoLink){
+                        data.push(['/get_pano?id='+panoLink.linkId, '/get_pano?id='+panoLink.linkId+'thumbnail', panoLink.linkDescription]);
+                    });
+
+                    panoCarouselManger = new PanoCarouselManger($('#pano'), data);
+                    panoCarouselManger.initialize();
+                    panoCarouselInit=true;
+                    panoCarouselManger.contentDivResized();
+                    panoCarouselManger.navigationDivResized();
+                } else {
+                    panoCarouselManger.contentDivResized();
+                    panoCarouselManger.navigationDivResized();
+                }
+              } else {
+                    imageCarouselManger.contentDivResized();
+                    imageCarouselManger.navigationDivResized();
+              }
+            });
+
+            $('[name=title]').html(advJson.title);
+
+            if (advJson.imageLinks.length===0 && advJson.panoLinks.length===0 && advJson.videoLinks.length===0){
+                $('#media').addClass('hidden');
+            } else {
+                if (advJson.imageLinks.length===0){
+                    $('[href=#photo]').addClass('hidden');
+                } else {
+                    var data=[];
+                    $.each(advJson.imageLinks, function(index, imageLink){
+                        data.push(['/get_image?id='+imageLink.linkId, '/get_image?id='+imageLink.linkId+'thumbnail', imageLink.linkDescription]);
+                    });
+
+                    imageCarouselManger = new ImageCarouselManger($('#photo'), data);
+                    imageCarouselManger.initialize();
+                }
+                if (advJson.panoLinks.length===0){
+                    $('[href=#pano]').addClass('hidden');
+                }
+                if (advJson.videoLinks.length===0){
+                    $('[href=#video]').addClass('hidden');
+                }
+            }
+
+            var priceContainer=$('#priceContainer');
+            priceContainer.find('.pLabel').text(advJson.price.name);
+            priceContainer.find('.pValue').text(advJson.price.value);
+
+            var addressContainer=$('#addressContainer');
+            addressContainer.find('.pLabel').text(advJson.address.name);
+            addressContainer.find('.pValue').text(advJson.address.value);
+
+            var generateContent=function(fields){
+                var pLabelTemplate=$('.pLabelTemplate');
+                var pValueTextTemplate=$('.pValueTextTemplate');
+                var pValueBTrueTemplate=$('.pValueBTrueTemplate');
+                var pValueBFalseTemplate=$('.pValueBFalseTemplate');
+                var commonContent=document.createDocumentFragment();
+                var wFactor=4;
+                var currentRow;
+                var colSize='col-xs-'+(12/wFactor);
+                $.each(fields, function(i, field){
+                    if ((i%2)===0){
+                        if (currentRow!==undefined){
+                            commonContent.appendChild(currentRow[0]);
+                        }
+                        currentRow=$("<div class='row'></div>");
+                    }
+                    var pLabel=$(pLabelTemplate[0].cloneNode(true)).removeClass('hidden');
+                    pLabel.find('.pLabel').text(field.name);
+                    var pValue;
+                    if (field.value.indexOf('#') === 0){
+                        var bValue=field.value.substring(1, field.value.length);
+                        if (bValue==='true'){
+                            pValue=$(pValueBTrueTemplate[0].cloneNode(true)).removeClass('hidden');
+                        } else {
+                            pValue=$(pValueBFalseTemplate[0].cloneNode(true)).removeClass('hidden');
+                        }
+                    } else {
+                        pValue=$(pValueTextTemplate[0].cloneNode(true)).removeClass('hidden');
+                        pValue.find('.pValue').text(field.value);
+                    }
+                    pLabel.addClass(colSize);
+                    pValue.addClass(colSize);
+                    currentRow[0].appendChild(pLabel[0]);
+                    currentRow[0].appendChild(pValue[0]);
+                });
+                commonContent.appendChild(currentRow[0]);
+                return commonContent;
+            };
+
+            $(generateContent(advJson.commonFields)).insertAfter('#commonTitle');
+            $(generateContent(advJson.communicationFields)).insertAfter('#communicationTitle');
+            $(generateContent(advJson.financialFields)).insertAfter('#financialTitle');
+
+            makeCheckInFav();
+            $('.inFavAddButton').click(function(){
+                addInFav(userAuthStatus, advJson.id, '');
+                switchFavButton(true);
+            });
+            $('.inFavRemoveButton').click(function(){
+                removeInFav(userAuthStatus, advJson.id);
+                switchFavButton(false);
+            });
+        });
+    </script>
+</head>
+<body>
+@views.html.header()
+<div class="container-fluid centered" style="max-width: 600px;">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 name="title"></h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12 tabbable" id="media">
+            <ul class="nav nav-tabs">
+                <li class="active"><a href="#photo" data-toggle="tab">Фото</a></li>
+                <li><a href="#pano" data-toggle="tab">Панорамы</a></li>
+                <li><a href="#video" data-toggle="tab">Видео</a></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane active" id="photo">
+                    <div class="row">
+                        <div class="col-lg-12 col-xs-12">
+                            <div class="jCarousel content">
+                                <ul>
+                                    <li><img class="img-responsive">
+
+                                        <p></p>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-1 col-xs-2">
+                            <a class="jcarousel-prev" href="#">
+                                <h1>
+                                    <span class="glyphicon glyphicon-chevron-left"></span>
+                                </h1>
+                            </a>
+                        </div>
+
+                        <div class="col-lg-10 col-xs-8">
+                            <div class="jCarousel navigation">
+                                <ul>
+                                    <li><img class="img-responsive"></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-1 col-xs-2">
+                            <a class="jcarousel-next" href="#">
+                                <h1>
+                                    <span class="glyphicon glyphicon-chevron-right"></span>
+                                </h1>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane" id="pano">
+                    <div class="row">
+                        <div class="col-lg-12 col-xs-12">
+                            <div class="jCarousel content">
+                                <ul>
+                                    <li>
+                                        <canvas></canvas>
+                                        <p></p>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-1 col-xs-2">
+                            <a class="jcarousel-prev" href="#">
+                                <h1>
+                                    <span class="glyphicon glyphicon-chevron-left"></span>
+                                </h1>
+                            </a>
+                        </div>
+
+                        <div class="col-lg-10 col-xs-8">
+                            <div class="jCarousel navigation">
+                                <ul>
+                                    <li><img class="img-responsive"></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-1 col-xs-2">
+                            <a class="jcarousel-next" href="#">
+                                <h1>
+                                    <span class="glyphicon glyphicon-chevron-right"></span>
+                                </h1>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane" id="video">
+                    <div class="row">
+                        <div class="col-lg-12 col-xs-12">
+                            <div class="jCarousel content">
+                                <ul>
+                                    <li>
+                                        <div>
+                                        </div>
+                                        <p></p>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-1 col-xs-2">
+                            <a class="jcarousel-prev" href="#">
+                                <h1>
+                                    <span class="glyphicon glyphicon-chevron-left"></span>
+                                </h1>
+                            </a>
+                        </div>
+
+                        <div class="col-lg-10 col-xs-8">
+                            <div class="jCarousel navigation">
+                                <ul>
+                                    <li><img class="img-responsive"></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-1 col-xs-2">
+                            <a class="jcarousel-next" href="#">
+                                <h1>
+                                    <span class="glyphicon glyphicon-chevron-right"></span>
+                                </h1>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <hr>
+    <div class="row" id="priceContainer">
+        <div class="col-sm-3 col-xs-4">
+            <label class="pLabel"></label>
+        </div>
+        <div class="col-sm-9 col-xs-8">
+            <label class="pValue" style="background-color: #33CC00;"></label>
+        </div>
+    </div>
+    <div class="row" id="ownerContainer">
+        <div class="col-sm-3 col-xs-4">
+            <label class="pLabel">Владелец</label>
+        </div>
+        <div class="col-sm-9 col-xs-8">
+            <a>показать</a>
+            <span class="glyphicon glyphicon-eye-open" style="color: #0000FF; font-size: 15px;"></span>
+        </div>
+    </div>
+    <div class="row" id="addressContainer">
+        <div class="col-sm-3 col-xs-4">
+            <label class="pLabel">Адрес</label>
+        </div>
+        <div class="col-sm-9 col-xs-8">
+            <a class="pValue" data-toggle="collapse" data-target="#mapContainer2"></a>
+            <span class="glyphicon glyphicon-map-marker" style="color: #0000FF; font-size: 15px;"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div id="mapContainer2" class="collapse col-lg-12">
+        </div>
+    </div>
+    <hr>
+    <div class="row" id="commonTitle">
+        <div class="col-lg-12">
+            <h4 style="color: #F58220">Общая информация:</h4>
+        </div>
+    </div>
+    <div class="row" id="communicationTitle">
+        <div class="col-lg-12">
+            <h4 style="color: #F58220">Коммуникации:</h4>
+        </div>
+    </div>
+    <div class="row" id="financialTitle">
+        <div class="col-lg-12">
+            <h4 style="color: #F58220">Финансовая информация:</h4>
+        </div>
+    </div>
+
+    <div class="pLabelTemplate hidden">
+        <label style="font-size: 13px;"><strong class="pLabel"></strong></label>
+    </div>
+    <div class="pValueTextTemplate hidden">
+        <p style="font-size: 13px;" class="pValue"></p>
+    </div>
+    <div class="pValueBTrueTemplate hidden">
+        <span class="glyphicon glyphicon-ok" style="color:#339900; font-size: 13px;"></span>
+    </div>
+    <div class="pValueBFalseTemplate hidden">
+        <span class="glyphicon glyphicon-remove" style="color:#B00000; font-size: 13px;"></span>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <h4 style="color: #F58220">Описание:</h4>
+        </div>
+    </div>
+    <div class="row" id="descriptionContainer">
+        <div class="col-lg-12">
+            <p style="font-size: 15px;">Его пока нет, но оно очень скоро появится</p>
+        </div>
+    </div>
+    <hr>
+    <div class="row inFavContainer text-right">
+        <button class="btn btn-default">Пожаловаться
+            <span class="glyphicon glyphicon-warning-sign"></span>
+        </button>
+        <button class="btn btn-default inFavAddButton hidden">
+            Добавить
+            <span class="glyphicon glyphicon-star"></span>
+        </button>
+        <button class="btn btn-default inFavRemoveButton hidden">
+            Удалить
+            <span class="glyphicon glyphicon-star inFav-glyphicon-active"></span>
+        </button>
+    </div>
+</div>
+</body>
+</html>

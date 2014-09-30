@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Show property</title>
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-theme.css">
+    <link rel="stylesheet" href="/assets/stylesheets/bootstrap-glyphicons.css">
+    <style type="text/css">
+        .centered {
+        float: none;
+        margin-left: auto;
+        margin-right: auto;
+        }
+    </style>
+    <script src="/assets/javascripts/jquery-2.1.1.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/bootstrap.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/placeholders.jquery.min.js" type="text/javascript"></script>
+    <script src="/assets/javascripts/validation.support.js" type="text/javascript"></script>
+</head>
+<body>
+@views.html.header()
+<script type="text/javascript">
+        myAdClick=function(){
+            closeHeaderMenu();
+            $('a[href=#myAdv]').click();
+        };
+
+        mySearchClick=function(){
+            closeHeaderMenu();
+            $('a[href=#mySearch]').click();
+        };
+
+        purseClick=function(){
+            closeHeaderMenu();
+            $('a[href=#purse]').click();
+        };
+        settingsClick=function(){
+            closeHeaderMenu();
+            $('a[href=#settings]').click();
+        };
+
+        var changeTab=function(tabHref){
+            $('a[href='+tabHref+']').click();
+        }
+
+    $(function() {
+        initHeader();
+
+        var initialTab='myAdv';
+        @if(request().getQueryString("tab")!=null){
+            initialTab='@request().getQueryString("tab")';
+        }
+        $('#'+initialTab).addClass('active');
+    });
+
+
+
+</script>
+<div class="container-fluid">
+<div class="col-sm-3 col-lg-2 hidden-xs well">
+    <div class="row">
+        <p>
+            <a class="btn-lg" href="#myAdv" data-toggle="tab">Мои объявления</a>
+        </p>
+    </div>
+    <!--<div class="row">-->
+        <!--<p>-->
+            <!--<a class="btn-lg" href="#mySearch" data-toggle="tab">Мой поиск</a>-->
+        <!--</p>-->
+    <!--</div>-->
+    <div class="row">
+        <p>
+            <a class="btn-lg" href="#purse" data-toggle="tab">Кошелёк</a>
+        </p>
+    </div>
+    <div class="row">
+        <p>
+            <a class="btn-lg" href="#settings" data-toggle="tab">Настройки</a>
+        </p>
+    </div>
+</div>
+<div class="col-xs-12 col-sm-9 col-lg-10">
+<div class="tabbable">
+<div class="tab-content">
+<div class="tab-pane" id="myAdv">
+    <select class="btn btn-default visible-xs-block nav nav-tabs"
+            onchange="changeTab($(this).find(':selected').val());">
+        <option value="#myAdvActive">Активные</option>
+        <option value="#myAdvNotActive">Не активные</option>
+        <option value="#myAdvBlocked">Заблокированные</option>
+    </select>
+
+    <div class="tabbable">
+        <ul class="nav nav-tabs hidden-xs">
+            <li class="active"><a href="#myAdvActive" data-toggle="tab">Активные</a></li>
+            <li><a href="#myAdvNotActive" data-toggle="tab">Не активные</a></li>
+            <li><a href="#myAdvBlocked" data-toggle="tab">Заблокированные</a></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane active" id="myAdvActive">
+                <table class="table">
+                    <tr>
+                        <td>
+                            <input type="checkbox">
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                    Действие
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li><a>Удалить</a></li>
+                                    <li><a>Снять с продажи</a></li>
+                                    <li><a>Редактировать</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="active">
+                            <input type="checkbox">
+                        </td>
+                        <td class="active">
+                            <img style="max-width: 80px; max-height: 80px;" class="img-responsive"
+                                 src="http://www.carscollection.net/d/16531-4/honda-car+wallpapers-091.jpg">
+                        </td>
+                        <td class="active">1-к квартира, 8.10 зт.</td>
+                        <td class="active">Самара, Революционная 77</td>
+                        <td class="active">3000000 руб.</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="tab-pane" id="myAdvNotActive">
+                <table class="table">
+                    <tr>
+                        <td>
+                            <input type="checkbox">
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                    Действие
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li><a>Удалить</a></li>
+                                    <li><a>Активировать</a></li>
+                                    <li><a>Редактировать</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="active">
+                            <input type="checkbox">
+                        </td>
+                        <td class="active">
+                            <img style="max-width: 80px; max-height: 80px;" class="img-responsive"
+                                 src="http://www.carscollection.net/d/16531-4/honda-car+wallpapers-091.jpg">
+                        </td>
+                        <td class="active">1-к квартира, 8.10 зт.</td>
+                        <td class="active">Самара, Революционная 77</td>
+                        <td class="active">3000000 руб.</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="tab-pane" id="myAdvBlocked">
+                <table class="table">
+                    <tr>
+                        <td>
+                            <input type="checkbox">
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                    Действие
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li><a>Удалить</a></li>
+                                    <li><a>Редактировать</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="active">
+                            <input type="checkbox">
+                        </td>
+                        <td class="active">
+                            <img style="max-width: 80px; max-height: 80px;" class="img-responsive"
+                                 src="http://www.carscollection.net/d/16531-4/honda-car+wallpapers-091.jpg">
+                        </td>
+                        <td class="active">1-к квартира, 8.10 зт.</td>
+                        <td class="active">Самара, Революционная 77</td>
+                        <td class="active">3000000 руб.</td>
+                        <td class="active">Некорректное описание</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="tab-pane" id="mySearch">
+    <select class="btn btn-default visible-xs-block nav nav-tabs"
+            onchange="changeTab($(this).find(':selected').val());">
+        <option value="#mySearchActive">Активные</option>
+        <option value="#mySearchNotActive">Не активные</option>
+    </select>
+
+    <div class="tabbable">
+        <ul class="nav nav-tabs hidden-xs">
+            <li class="active"><a href="#mySearchActive" data-toggle="tab">Активные</a></li>
+            <li><a href="#mySearchNotActive" data-toggle="tab">Не активные</a></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane active" id="mySearchActive">
+                <table class="table">
+                    <tr>
+                        <td>
+                            <input type="checkbox">
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                    Действие
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li><a>Удалить</a></li>
+                                    <li><a>Дизактивировать</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="active">
+                            <input type="checkbox">
+                        </td>
+                        <td class="active">
+                            Описание поиска
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="tab-pane" id="mySearchNotActive">
+                <table class="table">
+                    <tr>
+                        <td>
+                            <input type="checkbox">
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                    Действие
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li><a>Удалить</a></li>
+                                    <li><a>Активировать</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="active">
+                            <input type="checkbox">
+                        </td>
+                        <td class="active">
+                            Описание поиска
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="tab-pane" id="purse">
+    <select class="btn btn-default visible-xs-block nav nav-tabs"
+            onchange="changeTab($(this).find(':selected').val());">
+        <option value="#pursePayments">Платежи</option>
+        <option value="#purseOrders">Списания</option>
+    </select>
+
+    <div class="tabbable">
+        <ul class="nav nav-tabs hidden-xs">
+            <li class="active"><a href="#pursePayments" data-toggle="tab">Платежи</a></li>
+            <li><a href="#purseOrders" data-toggle="tab">Списания</a></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane active" id="pursePayments">
+                <label>Баланс: 1000р.</label>
+                <table class="table">
+                    <tr>
+                        <td class="active">
+                            Дата
+                        </td>
+                        <td class="active">
+                            Сумма
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="tab-pane" id="purseOrders">
+                <table class="table">
+                    <tr>
+                        <td class="active">
+                            Дата
+                        </td>
+                        <td class="active">
+                            Сумма
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="tab-pane" id="settings">
+    Пока их нет
+</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

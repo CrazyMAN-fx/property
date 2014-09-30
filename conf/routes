@@ -1,0 +1,44 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /                           controllers.Application.index()
+GET    /new_property                controllers.Application.createNew()
+POST   /new_property/add           controllers.AdController.addNewAdv()
+POST   /new_property/edit           controllers.AdController.editAdv()
+GET    /show_property               controllers.AdController.show()
+
+GET     /registration               controllers.Application.registration()
+GET     /registration/quick         controllers.Application.quickRegistration()
+POST    /registration/register      controllers.UserController.register()
+POST    /login                      controllers.UserController.login()
+GET    /logout                      controllers.UserController.logout()
+GET     /try_login                  controllers.Application.loginPage()
+
+POST    /upload_image/              controllers.FileController.uploadImage()
+GET    /delete_image/temp/          controllers.FileController.deleteTempImage()
+GET    /get_image/temp/             controllers.FileController.getTempImage()
+
+GET    /get_image                   controllers.FileController.getImage()
+
+POST    /upload_pano/               controllers.FileController.uploadImage()
+GET    /delete_pano/temp/           controllers.FileController.deleteTempImage()
+GET    /get_pano/temp/              controllers.FileController.getTempImage()
+
+GET    /get_pano                    controllers.FileController.getImage()
+
+GET    /proxy/                      controllers.Application.proxy()
+POST   /proxy/                      controllers.Application.proxy()
+
+GET     /office                     controllers.Application.office()
+GET     /search                     controllers.SearchController.searchResult()
+
+GET     /checkInFav                 controllers.UserController.checkInFav()
+GET     /addInFav                   controllers.UserController.addInFav()
+GET     /removeInFav                controllers.UserController.removeInFav()
+GET     /favourite                  controllers.Application.favourite()
+GET     /listInFav                  controllers.UserController.listInFav()
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public", file)
